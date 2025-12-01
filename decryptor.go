@@ -10,7 +10,6 @@ import (
 	"log"
 	"math/big"
 	"os"
-	"path/filepath"
 )
 
 // --- Math utils --- //
@@ -35,11 +34,9 @@ func rawRSADecrypt(c *big.Int, priv *rsa.PrivateKey) *big.Int {
 
 // --- DECRYPTOR --- //
 
-// This function deduces the private key of victim
-// We run Yung's 1996 algorithm
-
 func DECRYPTOR(n *big.Int, e *big.Int, privKey *rsa.PrivateKey, bitsize int) (*big.Int, *big.Int, *big.Int) {
-	fmt.Println("[*] Extracting private key from SETUP backdoor...")
+	fmt.Printf("\n------\n[*] Deriving private key from SETUP...\n")
+	fmt.Printf("    > PK bitsize: %d\n", bitsize)
 
 	// 1. Take the uppermost n/bits of n as u
 	c := new(big.Int).Rsh(n, uint(bitsize))
@@ -66,17 +63,17 @@ func DECRYPTOR(n *big.Int, e *big.Int, privKey *rsa.PrivateKey, bitsize int) (*b
 	if r1.Sign() == 0 && isPrime(p1) && isPrime(q1) {
 		p = p1
 		q = q1
-		fmt.Printf("[+] Found valid factorization using s1\n")
+		fmt.Printf("    > Found valid factorization using s1\n")
 	} else if r2.Sign() == 0 && isPrime(p2) && isPrime(q2) {
 		p = p2
 		q = q2
-		fmt.Printf("[+] Found valid factorization using s2\n")
+		fmt.Printf("    > Found valid factorization using s2\n")
 	} else {
 		log.Fatal("[!] Failed to find prime factorization - key may not be SETUP backdoored or wrong bitsize")
 	}
 
-	fmt.Printf("[+] Recovered p (bit length: %d)\n", p.BitLen())
-	fmt.Printf("[+] Recovered q (bit length: %d)\n", q.BitLen())
+	fmt.Printf("    > Recovered p (bit length: %d)\n", p.BitLen())
+	fmt.Printf("    > Recovered q (bit length: %d)\n", q.BitLen())
 
 	// 6. Compute d as e*d ≡ 1 mod phi(n)
 	pMinus := new(big.Int).Sub(p, big.NewInt(1))
@@ -88,8 +85,7 @@ func DECRYPTOR(n *big.Int, e *big.Int, privKey *rsa.PrivateKey, bitsize int) (*b
 		log.Fatal("[!] Failed to compute d")
 	}
 
-	fmt.Printf("[+] Recovered d (bit length: %d)\n", d.BitLen())
-
+	fmt.Printf("    > Recovered d (bit length: %d)\n------\n", d.BitLen())
 	return d, p, q
 }
 
@@ -132,7 +128,6 @@ func loadPrivateKey(filename string) (*rsa.PrivateKey, error) {
 		return nil, fmt.Errorf("[!] Failed to parse PEM block")
 	}
 
-	// OpenSSL allows multiple padding formats
 	// Try PKCS#1
 	priv, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err == nil {
@@ -163,74 +158,46 @@ func loadCiphertext(filename string) (*big.Int, error) {
 	return c, nil
 }
 
-// Load metadata
-func loadMetadata(filename string) (int, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return 512, nil // Default bitsize fallback
-	}
-
-	var bitsize int
-	_, err = fmt.Sscanf(string(data), "bitsize=%d", &bitsize)
-	if err != nil {
-		return 512, nil // Default fallback
-	}
-	return bitsize, nil
-}
-
 func main() {
 
 	victimPubKey := flag.String("pk", "", "Path to backdoored public key (.pem)")
 	attackerPrivKey := flag.String("sk", "", "Path to attacker's private key (.pem)")
 	cipherFile := flag.String("c", "", "Path to ciphertext file (.bin)")
-	verbose := flag.Bool("v", false, "Verbose output")
-	bitsize := flag.Int("bits", 0, "Bit size used for Z (default: 512)")
 
 	flag.Parse()
 	if *victimPubKey == "" || *attackerPrivKey == "" || *cipherFile == "" {
-		fmt.Println("\n [*] Usage: decryptor -pk <victim_pub.pem> -sk <attacker_priv.pem> -c <cipher.bin>")
+		fmt.Printf("\n[*] Usage: decryptor -pk <victim_pub.pem> -sk <attacker_priv.pem> -c <cipher.bin>\n\n")
 		flag.PrintDefaults()
+		fmt.Printf("\n\n")
 		os.Exit(1)
 	}
 
 	// Load pk
-	fmt.Println("[*] Loading victim's public key...")
+	fmt.Printf("\n------\n[*] Loading keys and ciphertext...\n")
 	victimPub, err := loadPublicKey(*victimPubKey)
 	if err != nil {
 		log.Fatalf("[!] Failed to load victim's public key: %v", err)
 	}
+	fmt.Printf("    > Loaded victim public key\n")
 
 	// Load SK
-	fmt.Println("[*] Loading attacker's private key...")
 	attackerPriv, err := loadPrivateKey(*attackerPrivKey)
 	if err != nil {
 		log.Fatalf("[!] Failed to load attacker's private key: %v", err)
 	}
+	fmt.Printf("    > Loaded attacker private key\n")
 
 	// Load ciphertext
-	fmt.Println("[*] Loading ciphertext...")
 	ciphertext, err := loadCiphertext(*cipherFile)
 	if err != nil {
 		log.Fatalf("[!] Failed to load ciphertext: %v", err)
 	}
-
-	// Check bitsize for z
-	detectedBitsize := *bitsize
-	if detectedBitsize == 0 {
-		metadataPath := filepath.Join(filepath.Dir(*victimPubKey), "metadata.txt")
-		detectedBitsize, _ = loadMetadata(metadataPath)
-		fmt.Printf("[i] Auto-detected bitsize: %d\n", detectedBitsize)
-	}
-
-	if *verbose {
-		fmt.Printf("\n[i] Victim's public key (N bit length: %d)\n", victimPub.N.BitLen())
-		fmt.Printf("[i] Attacker's key (N bit length: %d)\n", attackerPriv.N.BitLen())
-		fmt.Printf("[i] Ciphertext byte length: %d\n\n", len(ciphertext.Bytes()))
-	}
+	fmt.Printf("    > Loaded ciphertext\n------\n")
 
 	// Run SETUP algorithm to retrieve secret
+	bitsize := attackerPriv.N.BitLen()
 	e := big.NewInt(int64(victimPub.E))
-	d, p, q := DECRYPTOR(victimPub.N, e, attackerPriv, detectedBitsize)
+	d, p, q := DECRYPTOR(victimPub.N, e, attackerPriv, bitsize)
 
 	// Build private key from secret
 	victimPriv := &rsa.PrivateKey{
@@ -240,20 +207,12 @@ func main() {
 	}
 	victimPriv.Precompute()
 
-	fmt.Println("\n[+] Successfully extracted victim's private key!")
-
 	// Decrypt the ciphertext
-	fmt.Println("\n[*] Decrypting ciphertext...")
 	plaintext := rawRSADecrypt(ciphertext, victimPriv)
 	plaintextBytes := plaintext.Bytes()
 
-	fmt.Println("\n--- DECRYPTED MESSAGE ---")
+	fmt.Printf("\n--- DECRYPTED MESSAGE ---\n")
 	fmt.Printf("%s\n", plaintextBytes)
-	fmt.Println("-------------------------")
+	fmt.Printf("-------------------------\n")
 
-	if *verbose {
-		fmt.Printf("\n[i] Decryption details:\n")
-		fmt.Printf("[i] Plaintext byte length: %d\n", len(plaintextBytes))
-		fmt.Printf("[i] Plaintext hex: %x\n", plaintextBytes)
-	}
 }
