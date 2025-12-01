@@ -42,8 +42,8 @@ func solveForQandR(c *big.Int, RND *big.Int, p *big.Int, bitsize int) (*big.Int,
 
 func GENERATOR(pubKey *rsa.PublicKey, bitsize int) (*big.Int, *big.Int, *big.Int, *big.Int, *big.Int) {
 
-	fmt.Println("[*] Generating SETUP RSA key pair...")
-	fmt.Printf("[*] This may take a while...\n")
+	fmt.Printf("------\n[*] Generating %d-bits SETUP...\n", 2*bitsize)
+	fmt.Printf("    > This may take a while...\n------\n\n")
 
 	E := big.NewInt(int64(pubKey.E))
 	attempts := 0
@@ -67,8 +67,7 @@ func GENERATOR(pubKey *rsa.PublicKey, bitsize int) (*big.Int, *big.Int, *big.Int
 			continue
 		}
 
-		// 4. Generate random <bits> sized z
-		// In Yung 1996 => 1024 bits
+		// 4. Generate random z
 		z, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), uint(bitsize)))
 		if err != nil {
 			log.Fatal(err)
@@ -93,17 +92,16 @@ func GENERATOR(pubKey *rsa.PublicKey, bitsize int) (*big.Int, *big.Int, *big.Int
 		pMinus := new(big.Int).Sub(p, big.NewInt(1))
 		qMinus := new(big.Int).Sub(q, big.NewInt(1))
 		phi := new(big.Int).Mul(pMinus, qMinus)
-
 		d := new(big.Int).ModInverse(e, phi)
 		if d == nil {
 			continue
 		}
 
-		fmt.Printf("\n[+] Successfully generated backdoored key pair:\n")
-		fmt.Printf("[+]  p bit length: %d\n", p.BitLen())
-		fmt.Printf("[+]  q bit length: %d\n", q.BitLen())
-		fmt.Printf("[+]  n bit length: %d\n", n.BitLen())
-		fmt.Printf("[i]  Attempts needed: %d\n", attempts)
+		fmt.Printf("------\n[*] Found parameters:\n")
+		fmt.Printf("    > p bit length: %d\n", p.BitLen())
+		fmt.Printf("    > q bit length: %d\n", q.BitLen())
+		fmt.Printf("    > n bit length: %d // final key length\n", n.BitLen())
+		fmt.Printf("    > Attempts needed: %d\n------\n", attempts)
 
 		return n, e, d, p, q
 	}
@@ -177,56 +175,41 @@ func saveKeys(outputDir string, n, e, d, p, q *big.Int, bitsize int) error {
 		return err
 	}
 
-	// Save bitsize metadata for decryptor
-	metadataPath := filepath.Join(outputDir, "metadata.txt")
-	metadata := fmt.Sprintf("bitsize=%d\n", bitsize)
-	if err := os.WriteFile(metadataPath, []byte(metadata), 0644); err != nil {
-		return err
-	}
-
-	fmt.Printf("\n[+] Backdoored keys saved to:\n")
-	fmt.Printf("[+]  Private key: %s\n", privPath)
-	fmt.Printf("[+]  Public key:  %s\n", pubPath)
-	fmt.Printf("[*]  Metadata:    %s\n", metadataPath)
-
+	fmt.Printf("\n------\n[*] Backdoored keys saved to:\n")
+	fmt.Printf("    > Private key: %s\n", privPath)
+	fmt.Printf("    > Public key:  %s\n------\n", pubPath)
 	return nil
 }
 
 func main() {
 
 	attackerPubKey := flag.String("pk", "", "Path to attacker's PK(N,E) (.pem)")
-	outputDir := flag.String("o", "out", "Output directory for backdoored pair")
-	bitsize := flag.Int("bits", 512, "Bit size for z. Size increase computation time.")
+	outputDir := flag.String("o", "out", "Output directory for backdoored key-pair")
 
 	flag.Parse()
 	if *attackerPubKey == "" {
-		fmt.Println("\n[*] Usage: generator -pk <attacker_pub.pem> -o <output_dir>\n")
+		fmt.Printf("\n[*] Usage: generator -pk <attacker_pub.pem> [-o <output_dir>]\n\n")
 		flag.PrintDefaults()
-		fmt.Println("\n[*] Generate PK(N,E), SK(D) with :\n")
-		fmt.Println("    openssl genrsa -out attacker_priv.pem 2048")
-		fmt.Println("    openssl rsa -in attacker_priv.pem -pubout -out attacker_pub.pem")
+		fmt.Printf("\n[*] Generate PK(N,E), SK(D) with :\n\n")
+		fmt.Printf("    openssl genrsa -out attacker_priv.pem 2048\n")
+		fmt.Printf("    openssl rsa -in attacker_priv.pem -pubout -out attacker_pub.pem\n\n")
 		os.Exit(1)
 	}
 
 	// Load PK, SK
-	fmt.Println("[*] Loading attacker's key...")
 	pubKey, err := loadPublicKey(*attackerPubKey)
 	if err != nil {
 		log.Fatalf("[!] Failed to load public key: %v", err)
 	}
 
-	fmt.Printf("[+] Attacker's key loaded (N bit length: %d)\n", pubKey.N.BitLen())
-	fmt.Printf("[*] Using bitsize: %d\n\n", *bitsize)
-
 	// Run SETUP algorithm
-	n, e, d, p, q := GENERATOR(pubKey, *bitsize)
-	if err := saveKeys(*outputDir, n, e, d, p, q, *bitsize); err != nil {
+	bitsize := pubKey.N.BitLen()
+	n, e, d, p, q := GENERATOR(pubKey, bitsize)
+	if err := saveKeys(*outputDir, n, e, d, p, q, bitsize); err != nil {
 		log.Fatalf("[!] Failed to save keys: %v", err)
 	}
 
-	fmt.Println("\n[+] SETUP backdoored key pair generated successfully!")
-	fmt.Println("\n[i] To test encryption run:")
-	fmt.Printf("  echo -n \"hello world\" | openssl pkeyutl -encrypt -inkey %s/victim_pub.pem -pubin -out %s/cipher.bin\n", *outputDir, *outputDir)
-	fmt.Println("\n[i] To test SETUP backdoor run:")
-	fmt.Printf("  ./decryptor -pk %s/victim_pub.pem -sk <attacker_priv.pem> -c %s/cipher.bin\n", *outputDir, *outputDir)
+	fmt.Printf("\n------\n[*] Test with:\n")
+	fmt.Printf("    > echo -n \"hello world\" | openssl pkeyutl -encrypt -inkey %s/victim_pub.pem -pubin -out %s/cipher.bin // encrypt with SETUP PK\n", *outputDir, *outputDir)
+	fmt.Printf("    > ./decryptor -pk %s/victim_pub.pem -sk <attacker_priv.pem> -c %s/cipher.bin // decrypt with SK\n------\n\n", *outputDir, *outputDir)
 }
